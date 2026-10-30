@@ -11,7 +11,8 @@ import {
   tiposDocumento,
   videosLsc,
   VOTO_EN_BLANCO,
-  type Localidad,
+  type Candidato,
+  type Tarjeton,
   type TipoDocumento,
 } from "@/data/eleccion";
 
@@ -27,7 +28,7 @@ export function Votacion() {
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState<TipoDocumento>("CC");
   const [numero, setNumero] = useState("");
-  const [localidad, setLocalidad] = useState<Localidad | null>(null);
+  const [tarjeton, setTarjeton] = useState<Tarjeton | null>(null);
   const [opcion, setOpcion] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -77,8 +78,11 @@ export function Votacion() {
     } else if (paso === "documento") {
       const json = await enviar("/api/votante", { tipo, numero });
       if (json) {
-        if (json.localidad.id !== localidad?.id) setOpcion(null);
-        setLocalidad(json.localidad);
+        const nuevo: Tarjeton = json.tarjeton;
+        if (nuevo.localidad.id !== tarjeton?.localidad.id || nuevo.categoria !== tarjeton?.categoria) {
+          setOpcion(null);
+        }
+        setTarjeton(nuevo);
         ir("tarjeton");
       }
     } else if (paso === "tarjeton") {
@@ -171,7 +175,7 @@ export function Votacion() {
         </Paso>
       )}
 
-      {paso === "tarjeton" && localidad && (
+      {paso === "tarjeton" && tarjeton && (
         <section>
           <div className="mx-auto max-w-lg rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
             <h1
@@ -182,20 +186,22 @@ export function Votacion() {
               Tarjetón Electoral
             </h1>
             <div className="mt-3 space-y-2 text-lg text-verde sm:text-xl">
-              <p>{eleccion.sector}</p>
-              <p>{localidad.nombre}</p>
+              <p>{tarjeton.etiqueta}</p>
+              <p>{tarjeton.localidad.nombre}</p>
               <p>Seleccione su Candidato</p>
             </div>
           </div>
 
           <fieldset className="mt-8">
-            <legend className="sr-only">Candidatos de {localidad.nombre}</legend>
+            <legend className="sr-only">
+              Candidatos de {tarjeton.etiqueta}, {tarjeton.localidad.nombre}
+            </legend>
             <div className="grid gap-8 sm:grid-cols-2">
-              {localidad.candidatos.map((c) => (
+              {tarjeton.candidatos.map((c) => (
                 <OpcionVoto
                   key={c.id}
                   nombre={c.nombre}
-                  video={c.video}
+                  candidato={c}
                   elegida={opcion === c.id}
                   onVotar={() => {
                     setOpcion(c.id);
@@ -266,14 +272,14 @@ function Paso({
 
 function OpcionVoto({
   nombre,
-  video,
+  candidato,
   blanco,
   elegida,
   onVotar,
   className = "",
 }: {
   nombre: string;
-  video?: string;
+  candidato?: Candidato;
   blanco?: boolean;
   elegida: boolean;
   onVotar: () => void;
@@ -289,7 +295,12 @@ function OpcionVoto({
           </div>
         </div>
       ) : (
-        <LscVideo src={video} titulo={nombre} />
+        <LscVideo
+          src={candidato?.video}
+          poster={candidato?.poster}
+          titulo={`Video de presentación de ${nombre}`}
+          nota="Video no disponible"
+        />
       )}
       <div
         className={`mt-4 flex items-center justify-between gap-3 rounded-full bg-white py-2 pl-6 pr-2 shadow-md transition ${
@@ -302,8 +313,8 @@ function OpcionVoto({
           onClick={onVotar}
           aria-pressed={elegida}
           aria-label={`Votar por ${nombre}`}
-          className={`rounded-full px-6 py-2 font-medium text-white transition ${
-            elegida ? "bg-verde-oscuro" : "bg-verde hover:bg-verde-oscuro"
+          className={`rounded-full px-6 py-2 font-medium text-white shadow-sm transition duration-200 ease-out hover:scale-105 hover:bg-verde-oscuro hover:shadow-[0_6px_14px_rgb(31_157_63/0.35)] active:scale-95 ${
+            elegida ? "bg-verde-oscuro" : "bg-verde"
           }`}
         >
           {elegida ? "✓ Elegido" : "Votar"}

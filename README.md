@@ -10,9 +10,22 @@ pnpm dev
 ```
 
 - `/` — inicio: logo de la Alcaldía, fondo de lengua de señas, ilustración y botón INICIAR.
-- `/votar` — 1. nombres y apellidos → 2. tipo y número de documento → tarjetón de la localidad del votante → voto.
+- `/votar` — 1. nombres y apellidos → 2. tipo y número de documento → tarjetón de la localidad y tipo de discapacidad del votante → voto.
 
-Documentos de prueba (padrón demo): `CC 1000000001` (Localidad 1), `CC 1000000002` (Localidad 2), `CC 1000000003` (Localidad 3).
+Por tamaño del despliegue solo está cargada la **Localidad 1 Histórica y del Caribe Norte**, con los videos de presentación de sus candidatos en `public/videos/localidad-1/` (comprimidos a 640 px, ~28 MB en total).
+
+### Cédulas de prueba (padrón demo, `src/data/padron.ts`)
+
+| Documento | Tarjetón |
+| --- | --- |
+| `CC 123456789` | Discapacidad Auditiva — **reutilizable**, puede votar varias veces |
+| `CC 1000000001` | Discapacidad Visual |
+| `CC 1000000002` | Discapacidad Auditiva |
+| `CC 1000000003` | Discapacidad Múltiple |
+| `CC 1000000004` | Discapacidad Cognitiva |
+| `CC 1000000005` | Discapacidad Física |
+| `CC 1000000006` | Discapacidad Mental |
+| `CC 1000000007` | Organizaciones |
 
 > La versión con etapas (inscripción finalizada / votación / cierre) y secciones informativas está en la rama `landing-etapas`.
 
@@ -20,7 +33,7 @@ Documentos de prueba (padrón demo): `CC 1000000001` (Localidad 1), `CC 10000000
 
 | Qué | Archivo |
 | --- | --- |
-| Localidades, candidatos y videos LSC | `src/data/eleccion.ts` |
+| Localidades, candidatos (por categoría) y videos | `src/data/eleccion.ts` |
 | Padrón de votantes (demo) | `src/data/padron.ts` |
 | Imágenes (logo, fondo, ilustración) | `public/img/` |
 
