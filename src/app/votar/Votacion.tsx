@@ -11,12 +11,13 @@ import {
   tiposDocumento,
   videosLsc,
   VOTO_EN_BLANCO,
-  type Localidad,
+  type Candidato,
+  type Tarjeton,
   type TipoDocumento,
 } from "@/data/eleccion";
 
-type Paso = "nombre" | "documento" | "tarjeton" | "confirmar" | "listo";
-const PASOS: Paso[] = ["nombre", "documento", "tarjeton", "confirmar"];
+type Paso = "nombre" | "documento" | "tarjeton" | "listo";
+const PASOS: Paso[] = ["nombre", "documento", "tarjeton"];
 
 const campo =
   "w-full rounded-full border-2 border-azul-claro bg-white px-5 py-3 text-lg text-slate-800 shadow-inner placeholder:text-slate-400 focus:border-azul focus:outline-none";
@@ -27,7 +28,7 @@ export function Votacion() {
   const [nombre, setNombre] = useState("");
   const [tipo, setTipo] = useState<TipoDocumento>("CC");
   const [numero, setNumero] = useState("");
-  const [localidad, setLocalidad] = useState<Localidad | null>(null);
+  const [tarjeton, setTarjeton] = useState<Tarjeton | null>(null);
   const [opcion, setOpcion] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
@@ -77,14 +78,15 @@ export function Votacion() {
     } else if (paso === "documento") {
       const json = await enviar("/api/votante", { tipo, numero });
       if (json) {
-        if (json.localidad.id !== localidad?.id) setOpcion(null);
-        setLocalidad(json.localidad);
+        const nuevo: Tarjeton = json.tarjeton;
+        if (nuevo.localidad.id !== tarjeton?.localidad.id || nuevo.categoria !== tarjeton?.categoria) {
+          setOpcion(null);
+        }
+        setTarjeton(nuevo);
         ir("tarjeton");
       }
     } else if (paso === "tarjeton") {
       if (!opcion) return setError("Haz clic en VOTAR en la opción de tu preferencia.");
-      ir("confirmar");
-    } else if (paso === "confirmar") {
       const json = await enviar("/api/votos", { nombre, tipo, numero, opcion });
       if (json) ir("listo");
     }
@@ -95,11 +97,6 @@ export function Votacion() {
     if (i <= 0) router.push("/");
     else ir(PASOS[i - 1]);
   };
-
-  const nombreOpcion =
-    opcion === VOTO_EN_BLANCO
-      ? "Voto en blanco"
-      : localidad?.candidatos.find((c) => c.id === opcion)?.nombre;
 
   if (paso === "listo") {
     return (
@@ -120,8 +117,6 @@ export function Votacion() {
 
   return (
     <form onSubmit={onSubmit} noValidate>
-      <Progreso actual={PASOS.indexOf(paso)} />
-
       {paso === "nombre" && (
         <Paso titulo="1. Ingrese Nombres y Apellidos" refTitulo={titulo} video={videosLsc.nombre}>
           <label htmlFor="nombre" className="sr-only">
@@ -180,7 +175,7 @@ export function Votacion() {
         </Paso>
       )}
 
-      {paso === "tarjeton" && localidad && (
+      {paso === "tarjeton" && tarjeton && (
         <section>
           <div className="mx-auto max-w-lg rounded-2xl bg-white px-6 py-5 text-center shadow-lg">
             <h1
@@ -191,26 +186,22 @@ export function Votacion() {
               Tarjetón Electoral
             </h1>
             <div className="mt-3 space-y-2 text-lg text-verde sm:text-xl">
-              <p>{eleccion.sector}</p>
-              <p>{localidad.nombre}</p>
+              <p>{tarjeton.etiqueta}</p>
+              <p>{tarjeton.localidad.nombre}</p>
               <p>Seleccione su Candidato</p>
             </div>
           </div>
 
-          <LscVideo
-            src={videosLsc.tarjeton}
-            titulo="Instrucciones del tarjetón"
-            className="mx-auto mt-6 w-full max-w-sm"
-          />
-
           <fieldset className="mt-8">
-            <legend className="sr-only">Candidatos de {localidad.nombre}</legend>
+            <legend className="sr-only">
+              Candidatos de {tarjeton.etiqueta}, {tarjeton.localidad.nombre}
+            </legend>
             <div className="grid gap-8 sm:grid-cols-2">
-              {localidad.candidatos.map((c) => (
+              {tarjeton.candidatos.map((c) => (
                 <OpcionVoto
                   key={c.id}
                   nombre={c.nombre}
-                  video={c.video}
+                  candidato={c}
                   elegida={opcion === c.id}
                   onVotar={() => {
                     setOpcion(c.id);
@@ -233,27 +224,6 @@ export function Votacion() {
         </section>
       )}
 
-      {paso === "confirmar" && (
-        <Paso titulo="Confirma tu voto" refTitulo={titulo} video={videosLsc.confirmar}>
-          <dl className="divide-y divide-slate-200 rounded-2xl bg-white text-left shadow">
-            {[
-              ["Nombre", nombre],
-              ["Documento", `${tipo} ${numero}`],
-              ["Localidad", localidad?.nombre],
-              ["Tu voto", nombreOpcion],
-            ].map(([k, v]) => (
-              <div key={k} className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:justify-between">
-                <dt className="text-sm text-slate-500">{k}</dt>
-                <dd className="font-medium text-navy">{v}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="mt-3 px-2 text-sm text-slate-500">
-            Una vez enviado, el voto no se puede modificar.
-          </p>
-        </Paso>
-      )}
-
       <div aria-live="assertive" className="mt-6 min-h-6 text-center">
         {error && (
           <p role="alert" className="inline-block rounded-full bg-red-50 px-4 py-2 font-medium text-red-700">
@@ -269,27 +239,12 @@ export function Votacion() {
             <span className="inline-flex items-center gap-2">
               <LoaderCircle aria-hidden className="size-4 animate-spin" /> Enviando
             </span>
-          ) : paso === "confirmar" ? (
-            "Enviar voto"
           ) : (
             "Siguiente"
           )}
         </BotonSiguiente>
       </nav>
     </form>
-  );
-}
-
-function Progreso({ actual }: { actual: number }) {
-  return (
-    <p className="mb-6 text-center text-sm text-slate-500">
-      Paso {actual + 1} de {PASOS.length}
-      <span aria-hidden className="mx-auto mt-2 flex max-w-xs gap-1.5">
-        {PASOS.map((p, i) => (
-          <span key={p} className={`h-1.5 flex-1 rounded-full ${i <= actual ? "bg-verde" : "bg-slate-300"}`} />
-        ))}
-      </span>
-    </p>
   );
 }
 
@@ -317,14 +272,14 @@ function Paso({
 
 function OpcionVoto({
   nombre,
-  video,
+  candidato,
   blanco,
   elegida,
   onVotar,
   className = "",
 }: {
   nombre: string;
-  video?: string;
+  candidato?: Candidato;
   blanco?: boolean;
   elegida: boolean;
   onVotar: () => void;
@@ -340,7 +295,12 @@ function OpcionVoto({
           </div>
         </div>
       ) : (
-        <LscVideo src={video} titulo={nombre} />
+        <LscVideo
+          src={candidato?.video}
+          poster={candidato?.poster}
+          titulo={`Video de presentación de ${nombre}`}
+          nota="Video no disponible"
+        />
       )}
       <div
         className={`mt-4 flex items-center justify-between gap-3 rounded-full bg-white py-2 pl-6 pr-2 shadow-md transition ${
@@ -353,8 +313,8 @@ function OpcionVoto({
           onClick={onVotar}
           aria-pressed={elegida}
           aria-label={`Votar por ${nombre}`}
-          className={`rounded-full px-6 py-2 font-medium text-white transition ${
-            elegida ? "bg-verde-oscuro" : "bg-verde hover:bg-verde-oscuro"
+          className={`rounded-full px-6 py-2 font-medium text-white shadow-sm transition duration-200 ease-out hover:scale-105 hover:bg-verde-oscuro hover:shadow-[0_6px_14px_rgb(31_157_63/0.35)] active:scale-95 ${
+            elegida ? "bg-verde-oscuro" : "bg-verde"
           }`}
         >
           {elegida ? "✓ Elegido" : "Votar"}

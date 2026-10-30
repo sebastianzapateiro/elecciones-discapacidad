@@ -1,7 +1,7 @@
 import { tiposDocumento, type TipoDocumento } from "@/data/eleccion";
-import { buscarInscrito, jornadaCerrada, yaVoto } from "@/lib/votacion";
+import { buscarTarjeton, jornadaCerrada, yaVoto } from "@/lib/votacion";
 
-// Valida el documento y devuelve el tarjetón de la localidad del votante.
+// Valida el documento y devuelve el tarjetón de la localidad y categoría del votante.
 export async function POST(request: Request) {
   const cerrada = jornadaCerrada();
   if (cerrada) return cerrada;
@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     return Response.json({ error: "Tipo o número de documento no válido." }, { status: 400 });
   }
 
-  const resultado = buscarInscrito(tipo, numero);
-  if (!resultado) {
+  const tarjeton = buscarTarjeton(tipo, numero);
+  if (!tarjeton) {
     return Response.json(
       { error: "No encontramos tu inscripción con ese documento. Verifica los datos." },
       { status: 404 },
@@ -30,5 +30,5 @@ export async function POST(request: Request) {
     return Response.json({ error: "Este documento ya registró su voto." }, { status: 409 });
   }
 
-  return Response.json({ localidad: resultado.localidad });
+  return Response.json({ tarjeton });
 }

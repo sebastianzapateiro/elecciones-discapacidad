@@ -29,6 +29,13 @@ body {
     linear-gradient(180deg, #e9eff8 0%, #f4f7fb 45%, #ffffff 100%);
 }
 
+/* Tailwind 4 ya no pone cursor de mano en los botones */
+button:not(:disabled),
+select:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+
 :focus-visible {
   outline: 3px solid #f5b400;
   outline-offset: 3px;
